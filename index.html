@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JustWebAnimate</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg2: #111a2b;
+      --panel: rgba(18, 26, 42, 0.88);
+      --panel2: rgba(11, 17, 28, 0.9);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #edf6ff;
+      --muted: #9db0c9;
+      --accent: #7c3aed;
+      --accent2: #0ea5e9;
+      --accent3: #f59e0b;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --shadow: 0 18px 45px rgba(2, 6, 23, 0.5);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, #11213d 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+    }
+
+    .app {
+      width: min(1400px, 100%);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 22px;
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .sidebar {
+      padding: 20px 16px;
+    }
+
+    .brand {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 2.6vw, 2.7rem);
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .toolbar.two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+      font-size: 0.96rem;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124, 58, 237, 0.8);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(14, 165, 233, 0.9));
+      border: none;
+    }
+
+    .inspector {
+      margin-top: 18px;
+      background: rgba(10, 16, 28, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .inspector h2 {
+      margin: 0 0 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+    }
+
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: capitalize;
+    }
+
+    .control input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent2);
+    }
+
+    .control input[type="text"] {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 9px 10px;
+    }
+
+    .control input[type="color"] {
+      width: 100%;
+      height: 38px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .workspace {
+      padding: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .topbar .box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(12, 18, 30, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .timeline input {
+      flex: 1;
+      accent-color: var(--accent2);
+    }
+
+    .frame-readout {
+      min-width: 80px;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .fps {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fps input {
+      width: 72px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 8px 10px;
+    }
+
+    .stage-wrap {
+      background: rgba(9, 13, 21, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background:
+        linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)),
+        radial-gradient(circle at center, rgba(14, 165, 233, 0.22), rgba(15, 23, 42, 0.12) 45%, rgba(15, 23, 42, 0.95));
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar panel">
+      <div class="brand">
+        <p class="eyebrow">2D animation studio</p>
+        <h1>JustWebAnimate</h1>
+      </div>
+
+      <div class="toolbar">
+        <button class="primary" data-action="add-rect">Add Rectangle</button>
+        <button class="primary" data-action="add-circle">Add Circle</button>
+        <button class="primary" data-action="add-text">Add Text</button>
+      </div>
+
+      <div class="toolbar two-col">
+        <button data-action="play-toggle">Play</button>
+        <button data-action="add-keyframe">Add keyframe</button>
+        <button data-action="delete-selected">Delete</button>
+        <button data-action="export-json">Export</button>
+      </div>
+
+      <div class="inspector">
+        <h2>Inspector</h2>
+        <div id="empty-state" class="empty">Select an object on the stage.</div>
+        <div id="inspector" class="controls"></div>
+      </div>
+    </aside>
+
+    <main class="workspace panel">
+      <div class="topbar">
+        <div class="box">
+          <button data-action="prev-frame">⏮</button>
+          <button data-action="play-toggle">▶</button>
+          <button data-action="next-frame">⏭</button>
+        </div>
+
+        <div class="timeline">
+          <label for="timeline">Frame</label>
+          <input id="timeline" type="range" min="0" max="120" value="0" />
+          <span id="frame-readout" class="frame-readout">0 / 120</span>
+        </div>
+
+        <div class="fps box">
+          <label for="fps">FPS</label>
+          <input id="fps" type="number" min="1" max="60" value="24" />
+        </div>
+      </div>
+
+      <div class="stage-wrap">
+        <canvas id="stage" width="960" height="540"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const ctx = stage.getContext('2d');
+    const timeline = document.getElementById('timeline');
+    const frameReadout = document.getElementById('frame-readout');
+    const fpsInput = document.getElementById('fps');
+    const inspector = document.getElementById('inspector');
+    const emptyState = document.getElementById('empty-state');
+    const toast = document.getElementById('toast');
+
+    const state = {
+      objects: [],
+      selectedId: null,
+      currentFrame: 0,
+      totalFrames: 120,
+      fps: 24,
+      playing: false,
+      lastTimestamp: 0,
+    };
+
+    function uid() {
+      return 'obj-' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function makeKeyframes(baseValue) {
+      return [{ frame: 0, value: baseValue }];
+    }
+
+    function createShape(type, extra = {}) {
+      const base = {
+        id: uid(),
+        type,
+        x: 200,
+        y: 180,
+        opacity: 1,
+        rotation: 0,
+        fill: '#7c3aed',
+        keyframes: {}
+      };
+
+      if (type === 'rect') {
+        Object.assign(base, {
+          width: 180,
+          height: 92,
+          fill: '#0ea5e9',
+          x: 260,
+          y: 210,
+        });
+      }
+
+      if (type === 'circle') {
+        Object.assign(base, {
+          radius: 70,
+          fill: '#f59e0b',
+          x: 420,
+          y: 260,
+        });
+      }
+
+      if (type === 'text') {
+        Object.assign(base, {
+          text: 'JustWebAnimate',
+          fontSize: 38,
+          fill: '#ebf1ff',
+          x: 480,
+          y: 160,
+        });
+      }
+
+      const obj = { ...base, ...extra };
+      const propList = ['x', 'y', 'opacity', 'rotation'];
+
+      if (obj.type === 'rect') propList.push('width', 'height');
+      if (obj.type === 'circle') propList.push('radius');
+      if (obj.type === 'text') propList.push('fontSize', 'text');
+
+      propList.forEach((key) => {
+        if (!(key in obj.keyframes)) {
+          obj.keyframes[key] = makeKeyframes(obj[key]);
+        }
+      });
+
+      return obj;
+    }
+
+    function makeDemoScene() {
+      return [
+        createShape('circle', {
+          id: 'demo-moon',
+          x: 160, y: 150, radius: 52, fill: '#fbbf24',
+          keyframes: {
+            x: [{ frame: 0, value: 160 }, { frame: 40, value: 310 }, { frame: 80, value: 560 }, { frame: 120, value: 160 }],
+            y: [{ frame: 0, value: 150 }, { frame: 40, value: 210 }, { frame: 80, value: 175 }, { frame: 120, value: 150 }],
+            radius: [{ frame: 0, value: 52 }, { frame: 60, value: 64 }, { frame: 120, value: 52 }],
+            opacity: [{ frame: 0, value: 1 }, { frame: 120, value: 1 }],
+            rotation: [{ frame: 0, value: 0 }, { frame: 120, value: 0 }],
+          }
+        }),
+
+        createShape('rect', {
+          id: 'demo-bar',
+          x: 520, y: 350, width: 260, height: 34, fill: '#f59e0b',
+          keyframes: {
+            x: [{ frame: 0, value: 500 }, { frame: 35, value: 610 }, { frame: 80, value: 640 }, { frame: 120, value: 500 }],
+            y: [{ frame: 0, value: 350 }, { frame: 35, value: 290 }, { frame: 80, value: 336 }, { frame: 120, value: 350 }],
+            width: [{ frame: 0, value: 260 }, { frame: 60, value: 300 }, { frame: 120, value: 260 }],
+            opacity: [{ frame: 0, value: 0.9 }, { frame: 120, value: 0.9 }],
+            rotation: [{ frame: 0, value: 0 }, { frame: 60, value: 12 }, { frame: 120, value: 0 }],
+          }
+        }),
+
+        createShape('text', {
+          id: 'demo-title',
+          x: 500, y: 150, text: 'JustWebAnimate', fontSize: 40, fill: '#ebf1ff',
+          keyframes: {
+            x: [{ frame: 0, value: 500 }, { frame: 60, value: 530 }, { frame: 120, value: 500 }],
+            y: [{ frame: 0, value: 150 }, { frame: 60, value: 170 }, { frame: 120, value: 150 }],
+            opacity: [{ frame: 0, value: 0.9 }, { frame: 60, value: 1 }, { frame: 120, value: 0.9 }],
+            rotation: [{ frame: 0, value: -6 }, { frame: 60, value: 6 }, { frame: 120, value: -6 }],
+            fontSize: [{ frame: 0, value: 40 }, { frame: 60, value: 48 }, { frame: 120, value: 40 }],
+          }
+        })
+      ];
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.tid);
+      showToast.tid = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    function findSelected() {
+      return state.objects.find((obj) => obj.id === state.selectedId) || null;
+    }
+
+    function getEvaluatedValue(obj, property, frame = state.currentFrame) {
+      if (!obj) return 0;
+      const keyframes = obj.keyframes[property];
+      if (!keyframes || !keyframes.length) return obj[property];
+
+      const list = keyframes.slice().sort((a, b) => a.frame - b.frame);
+      if (list.length === 1) return list[0].value;
+
+      if (frame <= list[0].frame) return list[0].value;
+      if (frame >= list[list.length - 1].frame) return list[list.length - 1].value;
+
+      for (let i = 0; i < list.length - 1; i++) {
+        const a = list[i];
+        const b = list[i + 1];
+        if (frame >= a.frame && frame <= b.frame) {
+          if (a.frame === b.frame) return b.value;
+          const ratio = (frame - a.frame) / (b.frame - a.frame);
+          return a.value + (b.value - a.value) * ratio;
+        }
+      }
+
+      return list[list.length - 1].value;
+    }
+
+    function setKeyframe(obj, property, value, frame = state.currentFrame) {
+      if (!obj.keyframes[property]) obj.keyframes[property] = [];
+      const list = obj.keyframes[property];
+      const existing = list.find((item) => item.frame === frame);
+      if (existing) existing.value = value;
+      else list.push({ frame, value });
+      list.sort((a, b) => a.frame - b.frame);
+      obj[property] = value;
+    }
+
+    function propertiesFor(obj) {
+      const props = ['x', 'y', 'opacity', 'rotation'];
+      if (obj.type === 'circle') props.push('radius');
+      if (obj.type === 'rect') props.push('width', 'height');
+      if (obj.type === 'text') props.push('fontSize', 'text');
+      return props;
+    }
+
+    function addObject(type) {
+      const obj = createShape(type, {
+        x: 200 + Math.random() * 250,
+        y: 180 + Math.random() * 140,
+        fill: ['#7c3aed', '#22c55e', '#0ea5e9', '#ef4444', '#f59e0b'][Math.floor(Math.random() * 5)]
+      });
+      state.objects.push(obj);
+      state.selectedId = obj.id;
+      render();
+    }
+
+    function deleteSelected() {
+      if (!state.selectedId) {
+        showToast('No object selected.');
+        return;
+      }
+      state.objects = state.objects.filter((obj) => obj.id !== state.selectedId);
+      state.selectedId = state.objects[0]?.id || null;
+      render();
+    }
+
+    function addKeyframeForSelected() {
+      const obj = findSelected();
+      if (!obj) {
+        showToast('Select an object first.');
+        return;
+      }
+      propertiesFor(obj).forEach((prop) => {
+        setKeyframe(obj, prop, obj[prop]);
+      });
+      render();
+      showToast('Keyframe added.');
+    }
+
+    function exportJson() {
+      const payload = JSON.stringify({ totalFrames: state.totalFrames, fps: state.fps, objects: state.objects }, null, 2);
+      const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'justwebanimate-project.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast('Project exported.');
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.lineWidth = 1;
+      const spacing = 24;
+      for (let x = 0; x <= stage.width; x += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, stage.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= stage.height; y += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(stage.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawObject(obj) {
+      const x = getEvaluatedValue(obj, 'x');
+      const y = getEvaluatedValue(obj, 'y');
+      const opacity = getEvaluatedValue(obj, 'opacity');
+      const rotation = getEvaluatedValue(obj, 'rotation');
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = obj.fill;
+
+      if (obj.type === 'rect') {
+        const w = getEvaluatedValue(obj, 'width');
+        const h = getEvaluatedValue(obj, 'height');
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+      }
+
+      if (obj.type === 'circle') {
+        const r = getEvaluatedValue(obj, 'radius');
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (obj.type === 'text') {
+        const text = getEvaluatedValue(obj, 'text') || obj.text || 'Text';
+        const size = getEvaluatedValue(obj, 'fontSize');
+        ctx.font = `700 ${size}px "Segoe UI", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = obj.fill;
+        ctx.fillText(text, 0, 0);
+      }
+
+      ctx.restore();
+    }
+
+    function boundsFor(obj) {
+      const x = getEvaluatedValue(obj, 'x');
+      const y = getEvaluatedValue(obj, 'y');
+
+      if (obj.type === 'circle') {
+        const r = getEvaluatedValue(obj, 'radius');
+        return { x, y, w: r * 2 + 18, h: r * 2 + 18 };
+      }
+
+      if (obj.type === 'rect') {
+        const w = getEvaluatedValue(obj, 'width');
+        const h = getEvaluatedValue(obj, 'height');
+        return { x, y, w: w + 18, h: h + 18 };
+      }
+
+      const size = getEvaluatedValue(obj, 'fontSize');
+      const text = String(getEvaluatedValue(obj, 'text') || obj.text || 'Text');
+      const w = Math.max(80, text.length * size * 0.52 + 20);
+      const h = size + 20;
+      return { x, y, w, h };
+    }
+
+    function drawSelection(obj) {
+      if (!obj) return;
+      const { x, y, w, h } = boundsFor(obj);
+      ctx.save();
+      ctx.strokeStyle = '#7dd3fc';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+      ctx.restore();
+    }
+
+    function renderInspector() {
+      const obj = findSelected();
+      if (!obj) {
+        inspector.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      inspector.innerHTML = '';
+
+      propertiesFor(obj).forEach((prop) => {
+        const row = document.createElement('div');
+        row.className = 'control';
+
+        const label = document.createElement('label');
+        label.innerHTML = `<span>${prop}</span><span>${String(getEvaluatedValue(obj, prop))}</span>`;
+
+        const input = document.createElement('input');
+        let min = 0, max = 2000, step = 1;
+
+        if (prop === 'x' || prop === 'y') { min = 0; max = 960; }
+        if (prop === 'opacity') { min = 0; max = 1; step = 0.01; }
+        if (prop === 'rotation') { min = -180; max = 180; }
+        if (prop === 'radius') { min = 10; max = 220; }
+        if (prop === 'width' || prop === 'height') { min = 10; max = 500; }
+        if (prop === 'fontSize') { min = 8; max = 150; }
+
+        if (prop === 'text') {
+          input.type = 'text';
+          input.value = obj.text || '';
+          input.addEventListener('input', (e) => {
+            obj.text = e.target.value;
+            setKeyframe(obj, 'text', e.target.value);
+            render();
+          });
+        } else if (prop === 'fill') {
+          input.type = 'color';
+          input.value = obj.fill;
+          input.addEventListener('input', (e) => {
+            obj.fill = e.target.value;
+            render();
+          });
+        } else {
+          input.type = 'range';
+          input.min = String(min);
+          input.max = String(max);
+          input.step = String(step);
+          input.value = String(getEvaluatedValue(obj, prop));
+          input.addEventListener('input', (e) => {
+            const value = Number(e.target.value);
+            obj[prop] = value;
+            setKeyframe(obj, prop, value);
+            render();
+          });
+        }
+
+        row.appendChild(label);
+        row.appendChild(input);
+        inspector.appendChild(row);
+      });
+
+      const fillRow = document.createElement('div');
+      fillRow.className = 'control';
+      const fillLabel = document.createElement('label');
+      fillLabel.innerHTML = '<span>Fill</span>';
+      const fillInput = document.createElement('input');
+      fillInput.type = 'color';
+      fillInput.value = obj.fill;
+      fillInput.addEventListener('input', (e) => {
+        obj.fill = e.target.value;
+        render();
+      });
+      fillRow.appendChild(fillLabel);
+      fillRow.appendChild(fillInput);
+      inspector.appendChild(fillRow);
+    }
+
+    function renderFrameInfo() {
+      timeline.max = String(state.totalFrames);
+      timeline.value = String(state.currentFrame);
+      frameReadout.textContent = `${state.currentFrame} / ${state.totalFrames}`;
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, stage.width, stage.height);
+      drawGrid();
+      state.objects.forEach((obj) => drawObject(obj));
+      drawSelection(findSelected());
+      renderFrameInfo();
+      renderInspector();
+    }
+
+    function togglePlay() {
+      state.playing = !state.playing;
+      const button = document.querySelector('[data-action="play-toggle"]');
+      if (button) button.textContent = state.playing ? 'Pause' : 'Play';
+      const playButtons = document.querySelectorAll('[data-action="play-toggle"]');
+      playButtons.forEach((btn) => {
+        btn.textContent = state.playing ? 'Pause' : 'Play';
+      });
+    }
+
+    function animate(timestamp) {
+      if (state.playing) {
+        if (!state.lastTimestamp) state.lastTimestamp = timestamp;
+        const delta = timestamp - state.lastTimestamp;
+        const framesToAdvance = delta / (1000 / state.fps);
+        if (framesToAdvance >= 1) {
+          state.currentFrame += Math.floor(framesToAdvance);
+          if (state.currentFrame > state.totalFrames) state.currentFrame = 0;
+          state.lastTimestamp = timestamp;
+          render();
+        }
+      } else {
+        state.lastTimestamp = 0;
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function onPointerDown(event) {
+      const rect = stage.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * stage.width;
+      const y = ((event.clientY - rect.top) / rect.height) * stage.height;
+
+      let hit = null;
+      for (let i = state.objects.length - 1; i >= 0; i--) {
+        const obj = state.objects[i];
+        const b = boundsFor(obj);
+        const dx = x - b.x;
+        const dy = y - b.y;
+        const inside = Math.abs(dx) <= b.w / 2 && Math.abs(dy) <= b.h / 2;
+        if (inside) { hit = obj; break; }
+      }
+      state.selectedId = hit ? hit.id : null;
+      render();
+    }
+
+    function bindActions() {
+      document.querySelectorAll('[data-action]').forEach((button) => {
+        const action = button.dataset.action;
+        button.addEventListener('click', () => {
+          if (action === 'add-rect') addObject('rect');
+          if (action === 'add-circle') addObject('circle');
+          if (action === 'add-text') addObject('text');
+          if (action === 'play-toggle') togglePlay();
+          if (action === 'prev-frame') { state.currentFrame = Math.max(0, state.currentFrame - 1); render(); }
+          if (action === 'next-frame') { state.currentFrame = Math.min(state.totalFrames, state.currentFrame + 1); render(); }
+          if (action === 'add-keyframe') addKeyframeForSelected();
+          if (action === 'delete-selected') deleteSelected();
+          if (action === 'export-json') exportJson();
+        });
+      });
+
+      timeline.addEventListener('input', (e) => {
+        state.currentFrame = Number(e.target.value);
+        render();
+      });
+
+      fpsInput.addEventListener('change', (e) => {
+        state.fps = Math.max(1, Math.min(60, Number(e.target.value) || 24));
+        fpsInput.value = String(state.fps);
+      });
+
+      stage.addEventListener('pointerdown', onPointerDown);
+    }
+
+    function init() {
+      state.objects = makeDemoScene();
+      state.selectedId = state.objects[0]?.id || null;
+      bindActions();
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    init();
+  </script>
+</body>
+</html>
