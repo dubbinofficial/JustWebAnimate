@@ -1,0 +1,651 @@
+const stage = document.getElementById('stage');
+const ctx = stage.getContext('2d');
+const timelineInput = document.getElementById('timeline');
+const frameReadout = document.getElementById('frame-readout');
+const fpsInput = document.getElementById('fps');
+const inspector = document.getElementById('inspector');
+const selectionEmpty = document.getElementById('selection-empty');
+const fileImportInput = document.getElementById('file-import');
+const toast = document.getElementById('toast');
+
+const state = {
+  objects: [],
+  selectedId: null,
+  frame: 0,
+  totalFrames: 120,
+  fps: Number(fpsInput.value),
+  isPlaying: false,
+  lastFrameTime: 0,
+};
+
+const palette = ['#7c3aed', '#ef4444', '#f59e0b', '#22c55e', '#0ea5e9', '#f472b6'];
+
+function uid() {
+  return 'obj-' + Math.random().toString(36).slice(2, 10);
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+
+function createShape(type, overrides = {}) {
+  const shared = {
+    id: uid(),
+    type,
+    x: 240,
+    y: 180,
+    opacity: 1,
+    rotation: 0,
+    fill: palette[Math.floor(Math.random() * palette.length)],
+    keyframes: {},
+  };
+
+  const obj = { ...shared, ...overrides };
+  const frameProperties = ['x', 'y', 'opacity', 'rotation'];
+
+  if (type === 'rect') {
+    obj.width = 180;
+    obj.height = 100;
+    frameProperties.push('width', 'height');
+  }
+
+  if (type === 'circle') {
+    obj.radius = 70;
+    frameProperties.push('radius');
+  }
+
+  if (type === 'text') {
+    obj.text = 'JustWebAnimate';
+    obj.fontSize = 34;
+    frameProperties.push('fontSize', 'text');
+  }
+
+  frameProperties.forEach((prop) => {
+    obj.keyframes[prop] = [{ frame: 0, value: obj[prop] }];
+  });
+
+  return obj;
+}
+
+function createDemoScene() {
+  const moon = createShape('circle', {
+    x: 170,
+    y: 140,
+    radius: 52,
+    fill: '#fbbf24',
+    keyframes: {
+      x: [{ frame: 0, value: 140 }, { frame: 45, value: 340 }, { frame: 90, value: 620 }, { frame: 120, value: 140 }],
+      y: [{ frame: 0, value: 165 }, { frame: 45, value: 220 }, { frame: 90, value: 180 }, { frame: 120, value: 165 }],
+      radius: [{ frame: 0, value: 52 }, { frame: 60, value: 62 }, { frame: 120, value: 52 }],
+      opacity: [{ frame: 0, value: 1 }, { frame: 120, value: 1 }],
+      rotation: [{ frame: 0, value: 0 }, { frame: 120, value: 0 }],
+    },
+  });
+
+  const orb = createShape('circle', {
+    x: 460,
+    y: 360,
+    radius: 78,
+    fill: '#0ea5e9',
+    keyframes: {
+      x: [{ frame: 0, value: 460 }, { frame: 35, value: 620 }, { frame: 70, value: 740 }, { frame: 120, value: 460 }],
+      y: [{ frame: 0, value: 360 }, { frame: 35, value: 260 }, { frame: 70, value: 300 }, { frame: 120, value: 360 }],
+      radius: [{ frame: 0, value: 78 }, { frame: 50, value: 66 }, { frame: 120, value: 78 }],
+      opacity: [{ frame: 0, value: 0.8 }, { frame: 40, value: 1 }, { frame: 120, value: 0.8 }],
+      rotation: [{ frame: 0, value: 0 }, { frame: 120, value: 0 }],
+    },
+  });
+
+  const title = createShape('text', {
+    x: 460,
+    y: 160,
+    text: 'JustWebAnimate',
+    fontSize: 42,
+    fill: '#ebf1ff',
+    keyframes: {
+      x: [{ frame: 0, value: 460 }, { frame: 60, value: 500 }, { frame: 120, value: 460 }],
+      y: [{ frame: 0, value: 145 }, { frame: 60, value: 170 }, { frame: 120, value: 145 }],
+      opacity: [{ frame: 0, value: 0.85 }, { frame: 60, value: 1 }, { frame: 120, value: 0.85 }],
+      rotation: [{ frame: 0, value: -6 }, { frame: 60, value: 6 }, { frame: 120, value: -6 }],
+      fontSize: [{ frame: 0, value: 42 }, { frame: 60, value: 50 }, { frame: 120, value: 42 }],
+      text: [{ frame: 0, value: 'JustWebAnimate' }],
+    },
+  });
+
+  const bar = createShape('rect', {
+    x: 520,
+    y: 360,
+    width: 240,
+    height: 34,
+    fill: '#f59e0b',
+    keyframes: {
+      x: [{ frame: 0, value: 500 }, { frame: 40, value: 610 }, { frame: 80, value: 620 }, { frame: 120, value: 500 }],
+      y: [{ frame: 0, value: 360 }, { frame: 25, value: 300 }, { frame: 70, value: 360 }, { frame: 120, value: 360 }],
+      width: [{ frame: 0, value: 240 }, { frame: 60, value: 310 }, { frame: 120, value: 240 }],
+      height: [{ frame: 0, value: 34 }, { frame: 120, value: 34 }],
+      opacity: [{ frame: 0, value: 0.92 }, { frame: 120, value: 0.92 }],
+      rotation: [{ frame: 0, value: 0 }, { frame: 70, value: 14 }, { frame: 120, value: 0 }],
+    },
+  });
+
+  return [moon, orb, title, bar];
+}
+
+function getSelectedObject() {
+  return state.objects.find((object) => object.id === state.selectedId) || null;
+}
+
+function getObjectProperties(object) {
+  const properties = ['x', 'y', 'opacity', 'rotation'];
+
+  if (object.type === 'rect') {
+    properties.push('width', 'height');
+  }
+
+  if (object.type === 'circle') {
+    properties.push('radius');
+  }
+
+  if (object.type === 'text') {
+    properties.push('fontSize', 'text');
+  }
+
+  return properties;
+}
+
+function getValueAtFrame(object, key) {
+  if (!object || !object.keyframes || !object.keyframes[key]) {
+    return object ? object[key] : 0;
+  }
+
+  const frames = [...object.keyframes[key]].sort((a, b) => a.frame - b.frame);
+  if (!frames.length) {
+    return object[key];
+  }
+
+  if (typeof frames[0].value !== 'number') {
+    return frames[0].value;
+  }
+
+  const frame = state.frame;
+
+  if (frame <= frames[0].frame) {
+    return frames[0].value;
+  }
+
+  if (frame >= frames[frames.length - 1].frame) {
+    return frames[frames.length - 1].value;
+  }
+
+  for (let i = 0; i < frames.length - 1; i += 1) {
+    const current = frames[i];
+    const next = frames[i + 1];
+
+    if (frame >= current.frame && frame <= next.frame) {
+      if (current.frame === next.frame) {
+        return next.value;
+      }
+
+      const ratio = (frame - current.frame) / (next.frame - current.frame);
+      return current.value + (next.value - current.value) * ratio;
+    }
+  }
+
+  return frames[frames.length - 1].value;
+}
+
+function updateValueForCurrentFrame(object, key, value) {
+  if (!object.keyframes[key]) {
+    object.keyframes[key] = [];
+  }
+
+  const list = object.keyframes[key];
+  let existing = null;
+
+  for (let i = 0; i < list.length; i += 1) {
+    if (list[i].frame === state.frame) {
+      existing = list[i];
+      break;
+    }
+  }
+
+  if (existing) {
+    existing.value = value;
+  } else {
+    list.push({ frame: state.frame, value });
+    list.sort((a, b) => a.frame - b.frame);
+  }
+
+  object[key] = value;
+}
+
+function setKeyframeForSelected() {
+  const object = getSelectedObject();
+  if (!object) {
+    showToast('Select an object first.');
+    return;
+  }
+
+  getObjectProperties(object).forEach((property) => {
+    const value = object[property];
+    updateValueForCurrentFrame(object, property, value);
+  });
+
+  render();
+  showToast('Keyframe created.');
+}
+
+function addObject(type) {
+  const object = createShape(type, {
+    x: 240 + Math.random() * 230,
+    y: 200 + Math.random() * 120,
+  });
+
+  state.objects.push(object);
+  state.selectedId = object.id;
+  render();
+}
+
+function deleteSelected() {
+  if (!state.selectedId) {
+    showToast('No object selected.');
+    return;
+  }
+
+  state.objects = state.objects.filter((object) => object.id !== state.selectedId);
+  state.selectedId = state.objects[0] ? state.objects[0].id : null;
+  render();
+}
+
+function getObjectBounds(object) {
+  const x = getValueAtFrame(object, 'x');
+  const y = getValueAtFrame(object, 'y');
+
+  if (object.type === 'circle') {
+    const radius = getValueAtFrame(object, 'radius');
+    return { x, y, width: radius * 2, height: radius * 2 };
+  }
+
+  if (object.type === 'rect') {
+    return {
+      x,
+      y,
+      width: getValueAtFrame(object, 'width'),
+      height: getValueAtFrame(object, 'height'),
+    };
+  }
+
+  const fontSize = getValueAtFrame(object, 'fontSize');
+  return { x, y, width: Math.max(80, String(object.text || 'Text').length * fontSize * 0.5), height: fontSize * 1.4 };
+}
+
+function findObjectAtPoint(x, y) {
+  for (let i = state.objects.length - 1; i >= 0; i -= 1) {
+    const object = state.objects[i];
+    const bounds = getObjectBounds(object);
+    const dx = x - getValueAtFrame(object, 'x');
+    const dy = y - getValueAtFrame(object, 'y');
+
+    if (object.type === 'circle') {
+      const radius = getValueAtFrame(object, 'radius');
+      if (Math.hypot(dx, dy) <= radius) return object;
+    }
+
+    if (object.type === 'rect') {
+      if (Math.abs(dx) <= bounds.width / 2 && Math.abs(dy) <= bounds.height / 2) return object;
+    }
+
+    if (object.type === 'text') {
+      if (Math.abs(dx) <= bounds.width / 2 && Math.abs(dy) <= bounds.height / 2) return object;
+    }
+  }
+
+  return null;
+}
+
+function drawGrid() {
+  const spacing = 24;
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x < stage.width; x += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, stage.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < stage.height; y += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(stage.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawObject(object) {
+  const x = getValueAtFrame(object, 'x');
+  const y = getValueAtFrame(object, 'y');
+  const opacity = getValueAtFrame(object, 'opacity');
+  const rotation = getValueAtFrame(object, 'rotation');
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle = object.fill;
+
+  if (object.type === 'rect') {
+    const width = getValueAtFrame(object, 'width');
+    const height = getValueAtFrame(object, 'height');
+    ctx.fillRect(-width / 2, -height / 2, width, height);
+  }
+
+  if (object.type === 'circle') {
+    const radius = getValueAtFrame(object, 'radius');
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (object.type === 'text') {
+    const text = getValueAtFrame(object, 'text') || object.text || 'Text';
+    const fontSize = getValueAtFrame(object, 'fontSize');
+    ctx.font = `700 ${fontSize}px "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 0, 0);
+  }
+
+  ctx.restore();
+}
+
+function drawSelectionOutline(object) {
+  if (!object) return;
+
+  const bounds = getObjectBounds(object);
+  const x = bounds.x;
+  const y = bounds.y;
+  const width = bounds.width;
+  const height = bounds.height;
+
+  ctx.save();
+  ctx.strokeStyle = '#7dd3fc';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 8]);
+  ctx.strokeRect(x - width / 2 - 12, y - height / 2 - 12, width + 24, height + 24);
+  ctx.restore();
+}
+
+function renderInspector() {
+  const selected = getSelectedObject();
+
+  if (!selected) {
+    selectionEmpty.style.display = 'block';
+    inspector.innerHTML = '';
+    return;
+  }
+
+  selectionEmpty.style.display = 'none';
+  inspector.innerHTML = '';
+
+  const properties = getObjectProperties(selected);
+
+  properties.forEach((property) => {
+    const row = document.createElement('div');
+    row.className = 'control-row';
+
+    const label = document.createElement('label');
+    label.innerHTML = `<span>${property}</span><span>${String(getValueAtFrame(selected, property))}</span>`;
+
+    const input = document.createElement('input');
+    input.type = property === 'text' ? 'text' : property === 'fill' ? 'color' : 'range';
+
+    if (property === 'text') {
+      input.value = selected.text || '';
+      input.addEventListener('input', (event) => {
+        selected.text = event.target.value;
+        updateValueForCurrentFrame(selected, 'text', event.target.value);
+        render();
+      });
+    } else if (property === 'fill') {
+      input.value = selected.fill;
+      input.addEventListener('input', (event) => {
+        selected.fill = event.target.value;
+        render();
+      });
+    } else {
+      let min = 0;
+      let max = 1000;
+      let step = 1;
+
+      if (property === 'opacity') {
+        min = 0;
+        max = 1;
+        step = 0.01;
+      }
+
+      if (property === 'rotation') {
+        min = -180;
+        max = 180;
+      }
+
+      if (property === 'radius') {
+        min = 10;
+        max = 220;
+      }
+
+      if (property === 'width' || property === 'height') {
+        min = 10;
+        max = 500;
+      }
+
+      if (property === 'fontSize') {
+        min = 8;
+        max = 160;
+      }
+
+      if (property === 'x' || property === 'y') {
+        min = 0;
+        max = 960;
+      }
+
+      input.min = String(min);
+      input.max = String(max);
+      input.step = String(step);
+      input.value = String(getValueAtFrame(selected, property));
+
+      input.addEventListener('input', (event) => {
+        const value = Number(event.target.value);
+        selected[property] = value;
+        updateValueForCurrentFrame(selected, property, value);
+        render();
+      });
+    }
+
+    row.appendChild(label);
+    row.appendChild(input);
+    inspector.appendChild(row);
+  });
+
+  const fillRow = document.createElement('div');
+  fillRow.className = 'control-row';
+
+  const fillLabel = document.createElement('label');
+  fillLabel.innerHTML = '<span>Fill</span>';
+
+  const fillInput = document.createElement('input');
+  fillInput.type = 'color';
+  fillInput.value = selected.fill;
+  fillInput.addEventListener('input', (event) => {
+    selected.fill = event.target.value;
+    render();
+  });
+
+  fillRow.appendChild(fillLabel);
+  fillRow.appendChild(fillInput);
+  inspector.appendChild(fillRow);
+}
+
+function renderTimeline() {
+  timelineInput.max = String(state.totalFrames);
+  timelineInput.value = String(state.frame);
+  frameReadout.textContent = `${state.frame} / ${state.totalFrames}`;
+}
+
+function render() {
+  ctx.clearRect(0, 0, stage.width, stage.height);
+  drawGrid();
+
+  state.objects.forEach((object) => {
+    drawObject(object);
+  });
+
+  if (getSelectedObject()) {
+    drawSelectionOutline(getSelectedObject());
+  }
+
+  renderTimeline();
+  renderInspector();
+}
+
+function setPlaybackState(shouldPlay) {
+  state.isPlaying = shouldPlay;
+  const playButton = document.querySelector('[data-action="toggle-play"]');
+  if (playButton) {
+    playButton.textContent = shouldPlay ? 'Pause' : 'Play';
+  }
+}
+
+function animateFrame(timestamp) {
+  if (state.isPlaying) {
+    if (!state.lastFrameTime) {
+      state.lastFrameTime = timestamp;
+    }
+
+    const elapsed = timestamp - state.lastFrameTime;
+    const frameStep = elapsed / (1000 / state.fps);
+
+    if (frameStep >= 1) {
+      state.frame += Math.floor(frameStep);
+      if (state.frame > state.totalFrames) {
+        state.frame = 0;
+      }
+      state.lastFrameTime = timestamp;
+      render();
+    }
+  } else {
+    state.lastFrameTime = 0;
+  }
+
+  window.requestAnimationFrame(animateFrame);
+}
+
+function handleStageInteraction(event) {
+  const rect = stage.getBoundingClientRect();
+  const scaleX = stage.width / rect.width;
+  const scaleY = stage.height / rect.height;
+  const x = (event.clientX - rect.left) * scaleX;
+  const y = (event.clientY - rect.top) * scaleY;
+
+  const object = findObjectAtPoint(x, y);
+  state.selectedId = object ? object.id : null;
+  render();
+}
+
+function exportProject() {
+  const payload = {
+    totalFrames: state.totalFrames,
+    fps: state.fps,
+    objects: state.objects,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'justwebanimate-project.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Project exported.');
+}
+
+function importProject(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const parsed = JSON.parse(String(event.target.result));
+      state.objects = Array.isArray(parsed.objects) ? parsed.objects : [];
+      state.totalFrames = Number(parsed.totalFrames) || 120;
+      state.fps = Number(parsed.fps) || 24;
+      fpsInput.value = String(state.fps);
+      state.selectedId = state.objects[0] ? state.objects[0].id : null;
+      render();
+      showToast('Project imported.');
+    } catch (error) {
+      showToast('Import failed.');
+      console.error(error);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function bindControls() {
+  document.querySelectorAll('[data-action]').forEach((button) => {
+    const action = button.dataset.action;
+
+    button.addEventListener('click', () => {
+      if (action === 'add-rect') addObject('rect');
+      if (action === 'add-circle') addObject('circle');
+      if (action === 'add-text') addObject('text');
+      if (action === 'toggle-play') {
+        setPlaybackState(!state.isPlaying);
+      }
+      if (action === 'prev-frame') {
+        state.frame = Math.max(0, state.frame - 1);
+        render();
+      }
+      if (action === 'next-frame') {
+        state.frame = Math.min(state.totalFrames, state.frame + 1);
+        render();
+      }
+      if (action === 'add-keyframe') setKeyframeForSelected();
+      if (action === 'delete-selected') deleteSelected();
+      if (action === 'export-json') exportProject();
+      if (action === 'import-json') fileImportInput.click();
+    });
+  });
+
+  timelineInput.addEventListener('input', (event) => {
+    state.frame = Number(event.target.value);
+    render();
+  });
+
+  fpsInput.addEventListener('change', (event) => {
+    state.fps = Math.max(1, Math.min(60, Number(event.target.value) || 24));
+    fpsInput.value = String(state.fps);
+  });
+
+  stage.addEventListener('pointerdown', handleStageInteraction);
+  fileImportInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    importProject(file);
+    event.target.value = '';
+  });
+}
+
+function initialize() {
+  state.objects = createDemoScene();
+  state.selectedId = state.objects[0] ? state.objects[0].id : null;
+  bindControls();
+  render();
+  window.requestAnimationFrame(animateFrame);
+}
+
+initialize();
